@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CineVerse</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: radial-gradient(circle at top, #111, #000);
+  color: #fff;
+}
+
+header {
+  padding: 20px;
+  text-align: center;
+  background: #000;
+  border-bottom: 1px solid #222;
+}
+
+h1 {
+  letter-spacing: 2px;
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 20px;
+}
+
+.card {
+  background: #111;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 0 30px rgba(0,0,0,0.7);
+}
+
+input, textarea, select, button {
+  width: 100%;
+  margin: 8px 0;
+  padding: 10px;
+  border-radius: 5px;
+  border: none;
+  background: #1c1c1c;
+  color: #fff;
+}
+
+button {
+  background: linear-gradient(135deg, #e50914, #7a0000);
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+.movie {
+  border-bottom: 1px solid #222;
+  padding: 10px 0;
+}
+
+.verdict {
+  font-weight: bold;
+  margin-top: 5px;
+}
+
+.SKIP { color: #888; }
+.ONE-TIME { color: #f1c40f; }
+.RECOMMENDED { color: #2ecc71; }
+.CINEMA { color: #e74c3c; }
+
+canvas {
+  max-width: 300px;
+  margin: auto;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>🎬 CINEVERSE</h1>
+  <p>Where Cinephiles Don’t Scroll — They Discuss</p>
+</header>
+
+<div class="container">
+
+<!-- ADD MOVIE -->
+<div class="card">
+  <h2>Add Movie / Series / Anime</h2>
+  <input id="title" placeholder="Title">
+  <input id="category" placeholder="Category (Movie / Series / Anime)">
+  <input id="genres" placeholder="Genres (comma separated)">
+  <button onclick="addMovie()">Add</button>
+</div>
+
+<!-- ADD REVIEW -->
+<div class="card">
+  <h2>Add Review</h2>
+  <select id="movieSelect"></select>
+
+  <select id="verdict">
+    <option value="">Select Verdict (Mandatory)</option>
+    <option value="SKIP">SKIP</option>
+    <option value="ONE-TIME">ONE-TIME</option>
+    <option value="RECOMMENDED">RECOMMENDED</option>
+    <option value="CINEMA">CINEMA</option>
+  </select>
+
+  <textarea id="reviewText" placeholder="Write your thoughts..."></textarea>
+  <button onclick="addReview()">Submit Review</button>
+</div>
+
+<!-- MOVIE LIST -->
+<div class="card">
+  <h2>Reviews</h2>
+  <div id="movies"></div>
+</div>
+
+<!-- CHART -->
+<div class="card">
+  <h2>Community Verdict</h2>
+  <canvas id="chart"></canvas>
+</div>
+
+</div>
+
+<script>
+let movies = JSON.parse(localStorage.getItem("movies")) || [];
+let reviews = JSON.parse(localStorage.getItem("reviews")) || [];
+
+function save() {
+  localStorage.setItem("movies", JSON.stringify(movies));
+  localStorage.setItem("reviews", JSON.stringify(reviews));
+}
+
+function addMovie() {
+  const title = document.getElementById("title").value;
+  const category = document.getElementById("category").value;
+  const genres = document.getElementById("genres").value.split(",");
+
+  if (!title) return alert("Title required");
+
+  movies.push({ id: Date.now(), title, category, genres });
+  save();
+  render();
+}
+
+function addReview() {
+  const movieId = document.getElementById("movieSelect").value;
+  const verdict = document.getElementById("verdict").value;
+  const text = document.getElementById("reviewText").value;
+
+  if (!verdict) return alert("Verdict is mandatory");
+
+  reviews.push({ movieId, verdict, text });
+  save();
+  render();
+}
+
+function render() {
+  const movieSelect = document.getElementById("movieSelect");
+  movieSelect.innerHTML = movies.map(m => 
+    `<option value="${m.id}">${m.title}</option>`
+  ).join("");
+
+  const movieDiv = document.getElementById("movies");
+  movieDiv.innerHTML = movies.map(m => {
+    const mReviews = reviews.filter(r => r.movieId == m.id);
+    return `
+      <div class="movie">
+        <h3>${m.title}</h3>
+        ${mReviews.map(r => `
+          <div class="verdict ${r.verdict}">
+            ${r.verdict} — ${r.text}
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }).join("");
+
+  drawChart();
+}
+
+function drawChart() {
+  const counts = { SKIP:0, "ONE-TIME":0, RECOMMENDED:0, CINEMA:0 };
+  reviews.forEach(r => counts[r.verdict]++);
+
+  const ctx = document.getElementById("chart").getContext("2d");
+  if (window.chart) window.chart.destroy();
+
+  window.chart = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: Object.keys(counts),
+      datasets: [{
+        data: Object.values(counts),
+        backgroundColor: ["#777","#f1c40f","#2ecc71","#e74c3c"]
+      }]
+    }
+  });
+}
+
+render();
+</script>
+
+</body>
+</html>
